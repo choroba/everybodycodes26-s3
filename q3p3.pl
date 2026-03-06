@@ -10,41 +10,30 @@ use List::Util qw{ sum };
 use enum qw( ID PLUG LEFT_S RIGHT_S LEFT RIGHT IS_ROOT );
 
 sub plug($tree, $node_ref, $again = 0) {
-    if (! $tree->[LEFT] && match($tree->[LEFT_S], $$node_ref->[PLUG])) {
-        $tree->[LEFT] = $$node_ref;
-        warn "$$node_ref->[ID] into L $tree->[ID]";
-        return 1
-    }
-    warn "no match: $$node_ref->[ID] into L $tree->[ID]";
-
-    if ($tree->[LEFT] && 1 == match($tree->[LEFT_S], $tree->[LEFT][PLUG])
-        && 2 == match($tree->[LEFT_S], $$node_ref->[PLUG])
+    for my $side ([LEFT, LEFT_S, 'L'],
+                  [RIGHT, RIGHT_S, 'R']
     ) {
-        my $disconnect = $tree->[LEFT];
-        warn "kick $disconnect->[ID] from L $tree->[ID] by $$node_ref->[ID]";
-        $tree->[LEFT] = $$node_ref;
-        $$node_ref = $disconnect;
-    } elsif ($tree->[LEFT] && plug($tree->[LEFT], $node_ref)) {
-        return 1
-    }
+        my ($child, $child_s, $label) = @$side;
+        if (! $tree->[$child] && match($tree->[$child_s], $$node_ref->[PLUG])) {
+            $tree->[$child] = $$node_ref;
+            warn "$$node_ref->[ID] into $label $tree->[ID]";
+            return 1
+        }
+        warn "no match: $$node_ref->[ID] into $label $tree->[ID]";
 
-    if (! $tree->[RIGHT] && match($tree->[RIGHT_S], $$node_ref->[PLUG])) {
-        $tree->[RIGHT] = $$node_ref;
-        warn "$$node_ref->[ID] into R $tree->[ID]";
-        return 1
-    }
-    warn "no match: $$node_ref->[ID] into R $tree->[ID]";
+        if ($tree->[$child]
+            && 1 == match($tree->[$child_s], $tree->[$child][PLUG])
+            && 2 == match($tree->[$child_s], $$node_ref->[PLUG])
+        ) {
+            my $disconnect = $tree->[$child];
+            warn "kick $disconnect->[ID] from $label "
+                 . "$tree->[ID] by $$node_ref->[ID]";
+            $tree->[$child] = $$node_ref;
+            $$node_ref = $disconnect;
 
-    if ($tree->[RIGHT] && 1 == match($tree->[RIGHT_S], $tree->[RIGHT][PLUG])
-        && 2 == match($tree->[RIGHT_S], $$node_ref->[PLUG])
-    ) {
-        my $disconnect = $tree->[RIGHT];
-        warn "kick $disconnect->[ID] from R $tree->[ID] by $$node_ref->[ID]";
-        $tree->[RIGHT] = $$node_ref;
-        $$node_ref = $disconnect;
-
-    } elsif ($tree->[RIGHT] && plug($tree->[RIGHT], $node_ref)) {
-        return 1
+        } elsif ($tree->[$child] && plug($tree->[$child], $node_ref)) {
+            return 1
+        }
     }
 
     if ($tree->[IS_ROOT]) {
@@ -64,7 +53,6 @@ sub match($socket, $plug) {
 
 sub walk($tree) {
     my @seq = _walk($tree);
-    warn "@seq";
     my $i = 1;
     return sum(map $_ * $i++, @seq)
 }
